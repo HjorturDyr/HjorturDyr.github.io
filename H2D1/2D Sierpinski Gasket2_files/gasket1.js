@@ -3,7 +3,7 @@
 var gl;
 var points;
 
-var NumPoints = 5000;
+var NumPoints = 20000;
 
 window.onload = function init()
 {
@@ -29,6 +29,7 @@ window.onload = function init()
 
     var u = add( vertices[0], vertices[1] );
     var v = add( vertices[0], vertices[2] );
+    //var p = vec2(  100, 100 );
     var p = scale( 0.25, add( u, v ) );
 
     // And, add our initial point into our array of points
@@ -40,7 +41,7 @@ window.onload = function init()
     // last point and a randomly chosen vertex
 
     for ( var i = 0; points.length < NumPoints; ++i ) {
-        var j = Math.floor(Math.random() * 3);
+        var j = Math.floor((1 - Math.random()) * 3);
         p = add( points[i], vertices[j] );
         p = scale( 0.5, p );
         points.push( p );
