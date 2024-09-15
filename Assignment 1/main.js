@@ -206,7 +206,7 @@ function main() {
         );
     }
 
-    // Update and draw the scene, including the triangle, pellet, and rectangles
+    // Update and draw the scene, the triangle, pellet, and rectangles
     function drawScene() {
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
