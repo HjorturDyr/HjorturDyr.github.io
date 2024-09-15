@@ -111,7 +111,6 @@ function drawObject(gl, programInfo, buffer, xTranslation, yTranslation, vertexC
     gl.drawArrays(gl.TRIANGLE_FAN, 0, vertexCount);
 }
 
-// Main function to start everything
 function main() {
     const canvas = document.querySelector("#glCanvas");
     canvas.width = window.innerWidth;
@@ -136,9 +135,12 @@ function main() {
 
     const buffers = initBuffers(gl);
 
-    let triangleX = 0.0;   
-    let pelletY = null;    
-    let pelletX = null;    
+    let triangleX = 0.0; 
+    let pelletY = null;
+    let pelletX = null;
+
+    let score = 0; // Initialize score to 0
+    let gameWon = false; // Track if the game has been won
 
 
     const pelletSpeed = 0.07;
@@ -182,12 +184,14 @@ function main() {
 
     // Handle mouse move to update triangle position
     canvas.addEventListener('mousemove', function (event) {
-        triangleX = getNormalizedX(event.clientX, canvas.width);
+        if (!gameWon) {
+            triangleX = getNormalizedX(event.clientX, canvas.width);
+        }
     });
 
     // Handle left mouse button click to shoot pellet
     canvas.addEventListener('mousedown', function (event) {
-        if (event.button === 0) { // Left mouse button
+        if (!gameWon && event.button === 0) { // Left mouse button
             if (pelletY === null) {
                 pelletY = -1.0;      // Start pellet at the bottom of the canvas
                 pelletX = triangleX; // Capture triangle's current position for the pellet
@@ -208,8 +212,34 @@ function main() {
         );
     }
 
+    // Display "You Win" message when the game is won
+    function displayWinMessage() {
+        const ctx = canvas.getContext('2d');
+        ctx.font = '48px Arial';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+        ctx.fillText('You Win!', canvas.width / 2, canvas.height / 2);
+    }
+
+    // Display the current score at the top center of the screen
+    function displayScore() {
+        const ctx = canvas.getContext('2d');
+        ctx.font = '24px Arial';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.clearRect(0, 0, canvas.width, 50); // Clear the top part of the canvas
+        ctx.fillText('Score: ' + score, canvas.width / 2, 30); // Draw score
+    }
+
     // Update and draw the scene, the triangle, pellet, and rectangles
     function drawScene() {
+        if (gameWon) {
+            // If the game is won, display the win message and stop rendering
+            displayWinMessage();
+            return;
+        }
+
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -245,7 +275,13 @@ function main() {
                 rectangles.splice(i, 1);
                 pelletY = null; // Optionally remove the pellet upon collision
                 pelletX = null;
+                score++; // Increment the score
                 spawnRectangle(); // Respawn a new rectangle immediately
+
+                // Check if the score has reached 5 to stop the game
+                if (score >= 5) {
+                    gameWon = true; // Set gameWon flag to true
+                }
             }
 
             // Respawn rectangle if it reaches the top corner
@@ -255,6 +291,9 @@ function main() {
             }
         }
 
+        // Display the current score at the top center
+        //displayScore();
+
         requestAnimationFrame(drawScene);
     }
 
@@ -263,3 +302,4 @@ function main() {
 }
 
 window.onload = main;
+
