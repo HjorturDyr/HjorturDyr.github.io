@@ -136,11 +136,11 @@ function main() {
 
     const buffers = initBuffers(gl);
 
-    let triangleX = 0.0;   // Triangle's x position
-    let pelletY = null;    // Pellet's y position (null means no pellet is active)
-    let pelletX = null;    // Pellet's x position (fixed when fired)
+    let triangleX = 0.0;   
+    let pelletY = null;    
+    let pelletX = null;    
 
-    // Pellet speed
+
     const pelletSpeed = 0.05;
 
     // Rectangle properties
@@ -155,7 +155,7 @@ function main() {
         rectangleX = isLeft ? -1.0 : 1.0;
         rectangleY = -1.0;
 
-        // Calculate the speed based on random duration between 3 and 5 seconds
+        
         const duration = Math.random() * (5 - 3) + 2; // 3 to 5 seconds
         const endX = isLeft ? 1.0 : -1.0;
         const endY = 1.0;
