@@ -136,17 +136,19 @@ function main() {
 
     const buffers = initBuffers(gl);
 
-    let triangleX = 0.0;
-    let pelletY = null;
-    let pelletX = null;
+    let triangleX = 0.0;   
+    let pelletY = null;    
+    let pelletX = null;    
 
 
     const pelletSpeed = 0.07;
 
     // Rectangle properties
     const rectangles = []; // Array to store rectangles
-    const rectangleSize = 0.1; // Size of rectangles
+    const rectangleWidth = 0.2; // Width of rectangles
+    const rectangleHeight = 0.2; // Height of rectangles
 
+    // Spawn a rectangle at a random position (bottom-left or bottom-right)
     function spawnRectangle() {
         const isLeft = Math.random() < 0.5;
         const startX = isLeft ? -1.0 : 1.0;
@@ -163,12 +165,12 @@ function main() {
             y: startY,
             speedX: speedX,
             speedY: speedY,
-            width: rectangleSize,
-            height: rectangleSize,
+            width: rectangleWidth,
+            height: rectangleHeight,
         });
     }
 
-    // Spawn initial rectangles
+    // Spawn a few initial rectangles
     for (let i = 0; i < 3; i++) {
         spawnRectangle();
     }
@@ -243,6 +245,7 @@ function main() {
                 rectangles.splice(i, 1);
                 pelletY = null; // Optionally remove the pellet upon collision
                 pelletX = null;
+                spawnRectangle(); // Respawn a new rectangle immediately
             }
 
             // Respawn rectangle if it reaches the top corner
