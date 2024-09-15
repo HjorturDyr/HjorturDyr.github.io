@@ -141,7 +141,7 @@ function main() {
     let pelletX = null;
 
 
-    const pelletSpeed = 0.005;
+    const pelletSpeed = 0.07;
 
     // Rectangle properties
     const rectangles = []; // Array to store rectangles
