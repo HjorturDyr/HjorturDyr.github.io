@@ -18,6 +18,7 @@ const vsSource = `
     }
 `;
 
+
 // Fragment shader program
 const fsSource = `
     void main(void) {
