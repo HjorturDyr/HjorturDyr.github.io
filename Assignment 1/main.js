@@ -136,37 +136,42 @@ function main() {
 
     const buffers = initBuffers(gl);
 
-    let triangleX = 0.0;   
-    let pelletY = null;    
-    let pelletX = null;    
+    let triangleX = 0.0;
+    let pelletY = null;
+    let pelletX = null;
 
 
-    const pelletSpeed = 0.08;
+    const pelletSpeed = 0.005;
 
     // Rectangle properties
-    let rectangleX = null;
-    let rectangleY = null;
-    let rectangleSpeedX = 0;
-    let rectangleSpeedY = 0;
+    const rectangles = []; // Array to store rectangles
+    const rectangleSize = 0.1; // Size of rectangles
 
-    // Randomly spawn the rectangle at the bottom-left or bottom-right
     function spawnRectangle() {
         const isLeft = Math.random() < 0.5;
-        rectangleX = isLeft ? -1.0 : 1.0;
-        rectangleY = -1.0;
-
-        
-        const duration = Math.random() * (5 - 3) + 2; // 3 to 5 seconds
+        const startX = isLeft ? -1.0 : 1.0;
         const endX = isLeft ? 1.0 : -1.0;
+        const startY = -1.0;
         const endY = 1.0;
 
-        // Calculate the speed in both X and Y directions
-        rectangleSpeedX = (endX - rectangleX) / (duration * 60); // Assuming 60 FPS
-        rectangleSpeedY = (endY - rectangleY) / (duration * 60);
+        const duration = Math.random() * (5 - 3) + 3; // 3 to 5 seconds
+        const speedX = (endX - startX) / (duration * 60); // Assuming 60 FPS
+        const speedY = (endY - startY) / (duration * 60);
+
+        rectangles.push({
+            x: startX,
+            y: startY,
+            speedX: speedX,
+            speedY: speedY,
+            width: rectangleSize,
+            height: rectangleSize,
+        });
     }
 
-    // Initially spawn a rectangle
-    spawnRectangle();
+    // Spawn initial rectangles
+    for (let i = 0; i < 3; i++) {
+        spawnRectangle();
+    }
 
     // Convert the mouse position to WebGL coordinates
     function getNormalizedX(mouseX, canvasWidth) {
@@ -188,12 +193,25 @@ function main() {
         }
     });
 
-    // Draw the scene, triangle, pellet, and rectangle
+    // Check if a pellet collides with a rectangle
+    function checkCollision(rectangle) {
+        const halfWidth = rectangle.width / 2;
+        const halfHeight = rectangle.height / 2;
+
+        return (
+            pelletX >= (rectangle.x - halfWidth) &&
+            pelletX <= (rectangle.x + halfWidth) &&
+            pelletY >= (rectangle.y - halfHeight) &&
+            pelletY <= (rectangle.y + halfHeight)
+        );
+    }
+
+    // Update and draw the scene, including the triangle, pellet, and rectangles
     function drawScene() {
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        // Draw triangle at its current position
+        // Draw triangle
         drawObject(gl, programInfo, buffers.triangle, triangleX, 0.0, 3);
 
         // Draw pellet (if it has been shot)
@@ -208,17 +226,29 @@ function main() {
             }
         }
 
-        // Move and draw the rectangle
-        if (rectangleX !== null && rectangleY !== null) {
-            drawObject(gl, programInfo, buffers.pellet, rectangleX, rectangleY, 4); // Reusing the pellet buffer for the rectangle
+        // Update and draw rectangles
+        for (let i = rectangles.length - 1; i >= 0; i--) {
+            const rectangle = rectangles[i];
 
-            // Update the rectangle's position
-            rectangleX += rectangleSpeedX;
-            rectangleY += rectangleSpeedY;
+            // Update rectangle position
+            rectangle.x += rectangle.speedX;
+            rectangle.y += rectangle.speedY;
 
-            // Respawn the rectangle if it reaches the top corner
-            if (rectangleY >= 1.0) {
-                spawnRectangle();
+            // Draw rectangle
+            drawObject(gl, programInfo, buffers.pellet, rectangle.x, rectangle.y, 4); // Reusing the pellet buffer
+
+            // Check for collisions with the pellet
+            if (pelletY !== null && checkCollision(rectangle)) {
+                // Remove rectangle if it collides with the pellet
+                rectangles.splice(i, 1);
+                pelletY = null; // Optionally remove the pellet upon collision
+                pelletX = null;
+            }
+
+            // Respawn rectangle if it reaches the top corner
+            if (rectangle.y >= 1.0) {
+                rectangles.splice(i, 1); // Remove the rectangle
+                spawnRectangle(); // Spawn a new rectangle
             }
         }
 
