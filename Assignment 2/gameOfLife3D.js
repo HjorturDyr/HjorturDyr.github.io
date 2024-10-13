@@ -4,7 +4,7 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 gl.viewport(0, 0, canvas.width, canvas.height);
-gl.clearColor(0, 0, 0, 1); // Start with a black background
+gl.clearColor(0, 0, 0, 1);
 gl.enable(gl.DEPTH_TEST);
 
 let simulationStarted = false;
@@ -12,8 +12,8 @@ let lastUpdateTime = 0;
 let updateInterval = 1000;
 
 const gridSize = 10;
-const cubeSize = 2; // Set cube size larger for better visibility
-const spacing = 0.3; // Spacing between cubes
+const cubeSize = 2;
+const spacing = 0.3;
 
 const vertexShaderSource = `
     attribute vec3 position;
@@ -26,7 +26,7 @@ const vertexShaderSource = `
 const fragmentShaderSource = `
     precision mediump float;
     void main() {
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0); // White cubes
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
     }
 `;
 
@@ -60,21 +60,21 @@ const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 gl.useProgram(program);
 
 const cubeVertices = new Float32Array([
-    -1, -1, -1,  1, -1, -1,  1,  1, -1, -1,  1, -1, // Front face
-    -1, -1,  1,  1, -1,  1,  1,  1,  1, -1,  1,  1, // Back face
-    -1, -1, -1, -1,  1, -1, -1,  1,  1, -1, -1,  1, // Left face
-     1, -1, -1,  1,  1, -1,  1,  1,  1,  1, -1,  1, // Right face
-    -1, -1, -1,  1, -1, -1,  1, -1,  1, -1, -1,  1, // Bottom face
-    -1,  1, -1,  1,  1, -1,  1,  1,  1, -1,  1,  1  // Top face
+    -1, -1, -1,  1, -1, -1,  1,  1, -1, -1,  1, -1,
+    -1, -1,  1,  1, -1,  1,  1,  1,  1, -1,  1,
+    -1, -1, -1, -1,  1, -1, -1,  1,  1, -1,  1,
+     1, -1, -1,  1,  1, -1,  1,  1,  1,  1, -1,  1,
+    -1, -1, -1,  1, -1, -1,  1, -1,  1, -1, -1,  1,
+    -1,  1, -1,  1,  1, -1,  1,  1,  1, -1,  1,  1
 ]);
 
 const cubeIndices = new Uint16Array([
-    0, 1, 2, 2, 3, 0, // Front face
-    4, 5, 6, 6, 7, 4, // Back face
-    8, 9, 10, 10, 11, 8, // Left face
-    12, 13, 14, 14, 15, 12, // Right face
-    16, 17, 18, 18, 19, 16, // Bottom face
-    20, 21, 22, 22, 23, 20  // Top face
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4,
+    8, 9, 10, 10, 11, 8,
+    12, 13, 14, 14, 15, 12,
+    16, 17, 18, 18, 19, 16,
+    20, 21, 22, 22, 23, 20
 ]);
 
 const positionBuffer = gl.createBuffer();
@@ -89,7 +89,8 @@ const positionLocation = gl.getAttribLocation(program, 'position');
 gl.enableVertexAttribArray(positionLocation);
 gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
-let state = new Uint8Array(gridSize * gridSize * gridSize).map(() => Math.random() > 0.5 ? 1 : 0);
+const fillProbability = 0.3; // Probability of a cell being alive
+let state = new Uint8Array(gridSize * gridSize * gridSize).map(() => Math.random() < fillProbability ? 1 : 0);
 
 const projectionMatrix = createMatrix();
 const viewMatrix = createMatrix();
