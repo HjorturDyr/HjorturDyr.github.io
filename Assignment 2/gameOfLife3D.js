@@ -79,59 +79,112 @@ gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
 let state = new Uint8Array(gridSize * gridSize * gridSize).fill(0).map(() => Math.random() > 0.5 ? 1 : 0);
 
-const projectionMatrix = mat4.create();
-const viewMatrix = mat4.create();
-const modelMatrix = mat4.create();
-const viewProjectionMatrix = mat4.create();
+const projectionMatrix = createMatrix();
+const viewMatrix = createMatrix();
+const modelMatrix = createMatrix();
+const viewProjectionMatrix = createMatrix();
 
 let angleX = 0;
 let angleY = 0;
 let zoom = 20;
 
+function createMatrix() {
+    return new Float32Array(16).fill(0).map((_, i) => (i % 5 === 0 ? 1 : 0));
+}
+
+function multiplyMatrices(out, a, b) {
+    const result = new Float32Array(16);
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            result[i * 4 + j] =
+                a[i * 4] * b[j] +
+                a[i * 4 + 1] * b[j + 4] +
+                a[i * 4 + 2] * b[j + 8] +
+                a[i * 4 + 3] * b[j + 12];
+        }
+    }
+    out.set(result);
+}
+
+function perspective(matrix, fov, aspect, near, far) {
+    const f = 1.0 / Math.tan(fov / 2);
+    const nf = 1 / (near - far);
+
+    matrix[0] = f / aspect;
+    matrix[1] = 0;
+    matrix[2] = 0;
+    matrix[3] = 0;
+
+    matrix[4] = 0;
+    matrix[5] = f;
+    matrix[6] = 0;
+    matrix[7] = 0;
+
+    matrix[8] = 0;
+    matrix[9] = 0;
+    matrix[10] = (far + near) * nf;
+    matrix[11] = -1;
+
+    matrix[12] = 0;
+    matrix[13] = 0;
+    matrix[14] = 2 * far * near * nf;
+    matrix[15] = 0;
+}
+
+function lookAt(matrix, eye, center, up) {
+    const x0 = eye[0] - center[0], x1 = eye[1] - center[1], x2 = eye[2] - center[2];
+    const len = Math.hypot(x0, x1, x2);
+    const z0 = x0 / len, z1 = x1 / len, z2 = x2 / len;
+
+    const y0 = up[1] * z2 - up[2] * z1;
+    const y1 = up[2] * z0 - up[0] * z2;
+    const y2 = up[0] * z1 - up[1] * z0;
+
+    matrix[0] = y0;
+    matrix[1] = y1;
+    matrix[2] = y2;
+    matrix[3] = 0;
+
+    matrix[4] = z0;
+    matrix[5] = z1;
+    matrix[6] = z2;
+    matrix[7] = 0;
+    
+    matrix[12] = -eye[0];
+    matrix[13] = -eye[1];
+    matrix[14] = -eye[2];
+}
+
 function updateCamera() {
-    mat4.perspective(projectionMatrix, Math.PI / 4, canvas.width / canvas.height, 0.1, 100);
-    mat4.lookAt(viewMatrix, [zoom * Math.sin(angleY), zoom * Math.sin(angleX), zoom * Math.cos(angleY)], [0, 0, 0], [0, 1, 0]);
-    mat4.multiply(viewProjectionMatrix, projectionMatrix, viewMatrix);
+    perspective(projectionMatrix, Math.PI / 4, canvas.width / canvas.height, 0.1, 100);
+    lookAt(viewMatrix, [Math.cos(angleY) * zoom, Math.sin(angleX) * zoom, zoom], [0, 0, 0], [0, 1, 0]);
+    multiplyMatrices(viewProjectionMatrix, projectionMatrix, viewMatrix);
+    gl.uniformMatrix4fv(gl.getUniformLocation(program, 'u_modelViewProjection'), false, viewProjectionMatrix);
 }
 
 function drawCube(x, y, z) {
-    mat4.identity(modelMatrix);
-    mat4.translate(modelMatrix, modelMatrix, [x - gridSize / 2, y - gridSize / 2, z - gridSize / 2]);
-    const u_modelViewProjection = gl.getUniformLocation(program, 'u_modelViewProjection');
-    const modelViewProjection = mat4.create();
-    mat4.multiply(modelViewProjection, viewProjectionMatrix, modelMatrix);
-    gl.uniformMatrix4fv(u_modelViewProjection, false, modelViewProjection);
-
-    gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_SHORT, 0);
+    const translation = [x - gridSize / 2, y - gridSize / 2, z - gridSize / 2];
+    modelMatrix[12] = translation[0];
+    modelMatrix[13] = translation[1];
+    modelMatrix[14] = translation[2];
+    multiplyMatrices(viewProjectionMatrix, projectionMatrix, modelMatrix);
+    gl.uniformMatrix4fv(gl.getUniformLocation(program, 'u_modelViewProjection'), false, viewProjectionMatrix);
+    gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0);
 }
 
 function stepGameOfLife() {
-    const newState = new Uint8Array(state.length);
-
-    function getCell(x, y, z) {
-        if (x < 0 || y < 0 || z < 0 || x >= gridSize || y >= gridSize || z >= gridSize) return 0;
-        return state[x + y * gridSize + z * gridSize * gridSize];
-    }
+    const newState = new Uint8Array(gridSize * gridSize * gridSize).fill(0);
 
     for (let x = 0; x < gridSize; x++) {
         for (let y = 0; y < gridSize; y++) {
             for (let z = 0; z < gridSize; z++) {
-                let neighbors = 0;
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
-                        for (let dz = -1; dz <= 1; dz++) {
-                            if (dx !== 0 || dy !== 0 || dz !== 0) {
-                                neighbors += getCell(x + dx, y + dy, z + dz);
-                            }
-                        }
-                    }
-                }
-
-                const currentCell = getCell(x, y, z);
+                const index = x + y * gridSize + z * gridSize * gridSize;
+                const neighbors = countNeighbors(x, y, z);
+                const currentCell = state[index];
                 if (currentCell && (neighbors === 5 || neighbors === 6)) {
-                    newState[x + y * gridSize + z * gridSize * gridSize] = 1;
+                    newState[index] = 1;
                 } else if (!currentCell && neighbors === 6) {
-                    newState[x + y * gridSize + z * gridSize * gridSize] = 1;
+                    newState[index] = 1;
                 }
             }
         }
@@ -139,7 +192,25 @@ function stepGameOfLife() {
 
     state = newState;
 }
-//EEE
+
+function countNeighbors(x, y, z) {
+    let count = 0;
+    for (let i = -1; i <= 1; i++) {
+        for (let j = -1; j <= 1; j++) {
+            for (let k = -1; k <= 1; k++) {
+                if (i === 0 && j === 0 && k === 0) continue;
+                const nx = x + i;
+                const ny = y + j;
+                const nz = z + k;
+                if (nx >= 0 && ny >= 0 && nz >= 0 && nx < gridSize && ny < gridSize && nz < gridSize) {
+                    count += state[nx + ny * gridSize + nz * gridSize * gridSize];
+                }
+            }
+        }
+    }
+    return count;
+}
+
 function render() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     updateCamera();
