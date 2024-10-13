@@ -232,7 +232,7 @@ canvas.addEventListener('mousemove', (e) => {
         angleX += e.movementY * 0.01;
     }
 });
-
+//eh
 canvas.addEventListener('wheel', (e) => {
     zoom += e.deltaY * 0.01;
     zoom = Math.max(5, Math.min(30, zoom));
