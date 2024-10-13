@@ -12,8 +12,12 @@ let lastUpdateTime = 0;
 let updateInterval = 1000;
 
 const gridSize = 10;
-const cubeSize = 2;
-const spacing = 0.3;
+const cubeSize = 1.0; // Size of the cube when fully alive
+const spacing = 0.1; // Space between cubes
+const fillProbability = 0.2; // 20% chance of being alive
+
+let state = new Uint8Array(gridSize * gridSize * gridSize).map(() => Math.random() < fillProbability ? 1 : 0);
+let sizes = new Float32Array(gridSize * gridSize * gridSize).fill(0); // Initial sizes of cubes
 
 const vertexShaderSource = `
     attribute vec3 position;
@@ -60,12 +64,12 @@ const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 gl.useProgram(program);
 
 const cubeVertices = new Float32Array([
-    -1, -1, -1,  1, -1, -1,  1,  1, -1, -1,  1, -1,
-    -1, -1,  1,  1, -1,  1,  1,  1,  1, -1,  1,
-    -1, -1, -1, -1,  1, -1, -1,  1,  1, -1,  1,
-     1, -1, -1,  1,  1, -1,  1,  1,  1,  1, -1,  1,
-    -1, -1, -1,  1, -1, -1,  1, -1,  1, -1, -1,  1,
-    -1,  1, -1,  1,  1, -1,  1,  1,  1, -1,  1,  1
+    -0.5, -0.5, -0.5,  0.5, -0.5, -0.5,  0.5,  0.5, -0.5, -0.5,  0.5, -0.5,
+    -0.5, -0.5,  0.5,  0.5, -0.5,  0.5,  0.5,  0.5,  0.5, -0.5,  0.5,  0.5,
+    -0.5, -0.5, -0.5, -0.5,  0.5, -0.5, -0.5,  0.5, -0.5, -0.5,  0.5,  0.5,
+     0.5, -0.5, -0.5,  0.5,  0.5, -0.5,  0.5,  0.5,  0.5,  0.5, -0.5,  0.5,
+    -0.5, -0.5, -0.5,  0.5, -0.5, -0.5,  0.5, -0.5,  0.5, -0.5, -0.5,  0.5,
+    -0.5,  0.5, -0.5,  0.5,  0.5, -0.5,  0.5,  0.5,  0.5, -0.5,  0.5,  0.5
 ]);
 
 const cubeIndices = new Uint16Array([
@@ -89,9 +93,6 @@ const positionLocation = gl.getAttribLocation(program, 'position');
 gl.enableVertexAttribArray(positionLocation);
 gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
-const fillProbability = 0.3; // Probability of a cell being alive
-let state = new Uint8Array(gridSize * gridSize * gridSize).map(() => Math.random() < fillProbability ? 1 : 0);
-
 const projectionMatrix = createMatrix();
 const viewMatrix = createMatrix();
 const modelMatrix = createMatrix();
@@ -99,7 +100,7 @@ const viewProjectionMatrix = createMatrix();
 
 let angleX = 0;
 let angleY = 0;
-let zoom = 25;
+let zoom = 10;
 
 function createMatrix() {
     return new Float32Array(16).fill(0).map((_, i) => (i % 5 === 0 ? 1 : 0));
@@ -153,17 +154,30 @@ function updateCamera() {
     multiplyMatrices(viewProjectionMatrix, projectionMatrix, viewMatrix);
 }
 
-function drawCube(x, y, z) {
+function drawCube(x, y, z, size) {
     const translation = [
         (x - gridSize / 2) * (cubeSize + spacing), 
         (y - gridSize / 2) * (cubeSize + spacing), 
         (z - gridSize / 2) * (cubeSize + spacing)
     ];
+
+    const modelMatrix = createMatrix();
     modelMatrix[12] = translation[0];
     modelMatrix[13] = translation[1];
     modelMatrix[14] = translation[2];
-    multiplyMatrices(viewProjectionMatrix, projectionMatrix, modelMatrix);
-    gl.uniformMatrix4fv(gl.getUniformLocation(program, 'u_modelViewProjection'), false, viewProjectionMatrix);
+
+    // Scale the cube based on the current size
+    const scale = size || 1; // Use the provided size or default to 1
+    modelMatrix[0] *= scale;
+    modelMatrix[5] *= scale;
+    modelMatrix[10] *= scale;
+
+    const mvpMatrix = createMatrix();
+    multiplyMatrices(mvpMatrix, viewProjectionMatrix, modelMatrix);
+
+    const mvpLocation = gl.getUniformLocation(program, 'u_modelViewProjection');
+    gl.uniformMatrix4fv(mvpLocation, false, mvpMatrix);
+
     gl.drawElements(gl.TRIANGLES, cubeIndices.length, gl.UNSIGNED_SHORT, 0);
 }
 
@@ -177,8 +191,13 @@ function stepGameOfLife() {
                 const currentCell = state[index];
                 if (currentCell && (neighbors === 5 || neighbors === 6)) {
                     newState[index] = 1;
+                    sizes[index] = Math.min(sizes[index] + 0.02, 1); // Expand the cube
                 } else if (!currentCell && neighbors === 6) {
                     newState[index] = 1;
+                    sizes[index] = Math.min(sizes[index] + 0.02, 1); // Expand the cube
+                } else {
+                    newState[index] = 0;
+                    sizes[index] = Math.max(sizes[index] - 0.02, 0); // Shrink the cube
                 }
             }
         }
@@ -212,7 +231,7 @@ function render(currentTime) {
         for (let y = 0; y < gridSize; y++) {
             for (let z = 0; z < gridSize; z++) {
                 if (state[x + y * gridSize + z * gridSize * gridSize] === 1) {
-                    drawCube(x, y, z);
+                    drawCube(x, y, z, sizes[x + y * gridSize + z * gridSize * gridSize]);
                 }
             }
         }
@@ -232,7 +251,7 @@ canvas.addEventListener('mousemove', (e) => {
         angleX += e.movementY * 0.01;
     }
 });
-//eh
+
 canvas.addEventListener('wheel', (e) => {
     zoom += e.deltaY * 0.01;
     zoom = Math.max(5, Math.min(30, zoom));
