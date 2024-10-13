@@ -3,9 +3,13 @@ const gl = canvas.getContext('webgl');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+gl.viewport(0, 0, canvas.width, canvas.height);
+gl.clearColor(0, 0, 0, 1);
+gl.enable(gl.DEPTH_TEST);
+
 let simulationStarted = false;
 let lastUpdateTime = 0;
-let updateInterval = 1000; // Default time between updates (1 second)
+let updateInterval = 1000; // Default speed (1 second)
 
 const gridSize = 10;
 
@@ -20,7 +24,7 @@ const vertexShaderSource = `
 const fragmentShaderSource = `
     precision mediump float;
     void main() {
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0); // White cubes
     }
 `;
 
@@ -29,7 +33,7 @@ function compileShader(gl, source, type) {
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('Shader error: ', gl.getShaderInfoLog(shader));
+        console.error('Shader error:', gl.getShaderInfoLog(shader));
         gl.deleteShader(shader);
         return null;
     }
@@ -50,17 +54,17 @@ const program = createProgram(gl, vertexShaderSource, fragmentShaderSource);
 gl.useProgram(program);
 
 const cubeVertices = new Float32Array([
-    -0.5, -0.5, -0.5,   0.5, -0.5, -0.5,   0.5,  0.5, -0.5,  -0.5,  0.5, -0.5, // Front face
-    -0.5, -0.5,  0.5,   0.5, -0.5,  0.5,   0.5,  0.5,  0.5,  -0.5,  0.5,  0.5, // Back face
-    -0.5, -0.5, -0.5,  -0.5,  0.5, -0.5,  -0.5,  0.5,  0.5,  -0.5, -0.5,  0.5, // Left face
-     0.5, -0.5, -0.5,   0.5,  0.5, -0.5,   0.5,  0.5,  0.5,   0.5, -0.5,  0.5, // Right face
-    -0.5, -0.5, -0.5,   0.5, -0.5, -0.5,   0.5, -0.5,  0.5,  -0.5, -0.5,  0.5, // Bottom face
-    -0.5,  0.5, -0.5,   0.5,  0.5, -0.5,   0.5,  0.5,  0.5,  -0.5,  0.5,  0.5  // Top face
+    -1, -1, -1,  1, -1, -1,  1,  1, -1, -1,  1, -1, // Front face
+    -1, -1,  1,  1, -1,  1,  1,  1,  1, -1,  1,  1, // Back face
+    -1, -1, -1, -1,  1, -1, -1,  1,  1, -1, -1,  1, // Left face
+     1, -1, -1,  1,  1, -1,  1,  1,  1,  1, -1,  1, // Right face
+    -1, -1, -1,  1, -1, -1,  1, -1,  1, -1, -1,  1, // Bottom face
+    -1,  1, -1,  1,  1, -1,  1,  1,  1, -1,  1,  1  // Top face
 ]);
 
 const cubeIndices = new Uint16Array([
-    0, 1, 2,  2, 3, 0, // Front face
-    4, 5, 6,  6, 7, 4, // Back face
+    0, 1, 2, 2, 3, 0, // Front face
+    4, 5, 6, 6, 7, 4, // Back face
     8, 9, 10, 10, 11, 8, // Left face
     12, 13, 14, 14, 15, 12, // Right face
     16, 17, 18, 18, 19, 16, // Bottom face
@@ -79,7 +83,7 @@ const positionLocation = gl.getAttribLocation(program, 'position');
 gl.enableVertexAttribArray(positionLocation);
 gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
-let state = new Uint8Array(gridSize * gridSize * gridSize).fill(0).map(() => Math.random() > 0.5 ? 1 : 0);
+let state = new Uint8Array(gridSize * gridSize * gridSize).map(() => Math.random() > 0.5 ? 1 : 0);
 
 const projectionMatrix = createMatrix();
 const viewMatrix = createMatrix();
@@ -88,7 +92,7 @@ const viewProjectionMatrix = createMatrix();
 
 let angleX = 0;
 let angleY = 0;
-let zoom = 20;
+let zoom = 25;
 
 function createMatrix() {
     return new Float32Array(16).fill(0).map((_, i) => (i % 5 === 0 ? 1 : 0));
@@ -113,22 +117,9 @@ function perspective(matrix, fov, aspect, near, far) {
     const nf = 1 / (near - far);
 
     matrix[0] = f / aspect;
-    matrix[1] = 0;
-    matrix[2] = 0;
-    matrix[3] = 0;
-
-    matrix[4] = 0;
     matrix[5] = f;
-    matrix[6] = 0;
-    matrix[7] = 0;
-
-    matrix[8] = 0;
-    matrix[9] = 0;
     matrix[10] = (far + near) * nf;
     matrix[11] = -1;
-
-    matrix[12] = 0;
-    matrix[13] = 0;
     matrix[14] = 2 * far * near * nf;
     matrix[15] = 0;
 }
@@ -142,13 +133,9 @@ function lookAt(matrix, eye, center, up) {
     const y1 = up[2] * z0 - up[0] * z2;
     const y2 = up[0] * z1 - up[1] * z0;
 
-    const x0c = y1 * z2 - y2 * z1;
-    const x1c = y2 * z0 - y0 * z2;
-    const x2c = y0 * z1 - y1 * z0;
-
-    matrix[0] = x0c; matrix[4] = y0; matrix[8] = z0; matrix[12] = eye[0];
-    matrix[1] = x1c; matrix[5] = y1; matrix[9] = z1; matrix[13] = eye[1];
-    matrix[2] = x2c; matrix[6] = y2; matrix[10] = z2; matrix[14] = eye[2];
+    matrix[0] = y0; matrix[4] = y1; matrix[8] = y2; matrix[12] = eye[0];
+    matrix[1] = z0; matrix[5] = z1; matrix[9] = z2; matrix[13] = eye[1];
+    matrix[2] = y2; matrix[6] = z1; matrix[10] = z2; matrix[14] = eye[2];
     matrix[3] = 0; matrix[7] = 0; matrix[11] = 0; matrix[15] = 1;
 }
 
@@ -251,6 +238,4 @@ document.getElementById('speedSlider').addEventListener('input', (e) => {
     updateInterval = parseInt(e.target.value, 10);
 });
 
-gl.clearColor(0, 0, 0, 1);
-gl.enable(gl.DEPTH_TEST);
 render(0);
