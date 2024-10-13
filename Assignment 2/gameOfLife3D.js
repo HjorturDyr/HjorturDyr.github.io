@@ -9,9 +9,11 @@ gl.enable(gl.DEPTH_TEST);
 
 let simulationStarted = false;
 let lastUpdateTime = 0;
-let updateInterval = 1000; // Default speed (1 second)
+let updateInterval = 1000;
 
 const gridSize = 10;
+const cubeSize = 2; // Set cube size larger for better visibility
+const spacing = 0.3; // Spacing between cubes
 
 const vertexShaderSource = `
     attribute vec3 position;
@@ -147,7 +149,11 @@ function updateCamera() {
 }
 
 function drawCube(x, y, z) {
-    const translation = [x - gridSize / 2, y - gridSize / 2, z - gridSize / 2];
+    const translation = [
+        (x - gridSize / 2) * (cubeSize + spacing), 
+        (y - gridSize / 2) * (cubeSize + spacing), 
+        (z - gridSize / 2) * (cubeSize + spacing)
+    ];
     modelMatrix[12] = translation[0];
     modelMatrix[13] = translation[1];
     modelMatrix[14] = translation[2];
