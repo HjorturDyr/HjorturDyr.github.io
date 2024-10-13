@@ -4,7 +4,7 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 gl.viewport(0, 0, canvas.width, canvas.height);
-gl.clearColor(0, 0, 0, 1);
+gl.clearColor(0, 0, 0, 1); // Start with a black background
 gl.enable(gl.DEPTH_TEST);
 
 let simulationStarted = false;
@@ -49,6 +49,10 @@ function createProgram(gl, vertexSrc, fragmentSrc) {
     gl.attachShader(program, vs);
     gl.attachShader(program, fs);
     gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error('Program error:', gl.getProgramInfoLog(program));
+        return null;
+    }
     return program;
 }
 
@@ -127,18 +131,18 @@ function perspective(matrix, fov, aspect, near, far) {
 }
 
 function lookAt(matrix, eye, center, up) {
-    const x0 = eye[0] - center[0], x1 = eye[1] - center[1], x2 = eye[2] - center[2];
-    const len = Math.hypot(x0, x1, x2);
-    const z0 = x0 / len, z1 = x1 / len, z2 = x2 / len;
+    const z0 = eye[0] - center[0], z1 = eye[1] - center[1], z2 = eye[2] - center[2];
+    const len = Math.hypot(z0, z1, z2);
+    const zNorm = [z0 / len, z1 / len, z2 / len];
 
-    const y0 = up[1] * z2 - up[2] * z1;
-    const y1 = up[2] * z0 - up[0] * z2;
-    const y2 = up[0] * z1 - up[1] * z0;
+    const x0 = up[1] * zNorm[2] - up[2] * zNorm[1];
+    const x1 = up[2] * zNorm[0] - up[0] * zNorm[2];
+    const x2 = up[0] * zNorm[1] - up[1] * zNorm[0];
 
-    matrix[0] = y0; matrix[4] = y1; matrix[8] = y2; matrix[12] = eye[0];
-    matrix[1] = z0; matrix[5] = z1; matrix[9] = z2; matrix[13] = eye[1];
-    matrix[2] = y2; matrix[6] = z1; matrix[10] = z2; matrix[14] = eye[2];
-    matrix[3] = 0; matrix[7] = 0; matrix[11] = 0; matrix[15] = 1;
+    matrix[0] = x0; matrix[4] = x1; matrix[8] = x2;
+    matrix[1] = up[0]; matrix[5] = up[1]; matrix[9] = up[2];
+    matrix[2] = zNorm[0]; matrix[6] = zNorm[1]; matrix[10] = zNorm[2];
+    matrix[12] = eye[0]; matrix[13] = eye[1]; matrix[14] = eye[2]; matrix[15] = 1;
 }
 
 function updateCamera() {
@@ -163,8 +167,7 @@ function drawCube(x, y, z) {
 }
 
 function stepGameOfLife() {
-    const newState = new Uint8Array(gridSize * gridSize * gridSize).fill(0);
-
+    const newState = new Uint8Array(state.length);
     for (let x = 0; x < gridSize; x++) {
         for (let y = 0; y < gridSize; y++) {
             for (let z = 0; z < gridSize; z++) {
@@ -179,7 +182,6 @@ function stepGameOfLife() {
             }
         }
     }
-
     state = newState;
 }
 
