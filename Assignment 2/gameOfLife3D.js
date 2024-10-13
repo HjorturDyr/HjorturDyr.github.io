@@ -5,7 +5,7 @@ canvas.height = window.innerHeight;
 
 let simulationStarted = false;
 let lastUpdateTime = 0;
-let updateInterval = 1000; // Time between updates in milliseconds (1 second = slower)
+let updateInterval = 1000; // Default time between updates (1 second)
 
 const gridSize = 10;
 
@@ -142,26 +142,21 @@ function lookAt(matrix, eye, center, up) {
     const y1 = up[2] * z0 - up[0] * z2;
     const y2 = up[0] * z1 - up[1] * z0;
 
-    matrix[0] = y0;
-    matrix[1] = y1;
-    matrix[2] = y2;
-    matrix[3] = 0;
+    const x0c = y1 * z2 - y2 * z1;
+    const x1c = y2 * z0 - y0 * z2;
+    const x2c = y0 * z1 - y1 * z0;
 
-    matrix[4] = z0;
-    matrix[5] = z1;
-    matrix[6] = z2;
-    matrix[7] = 0;
-    
-    matrix[12] = -eye[0];
-    matrix[13] = -eye[1];
-    matrix[14] = -eye[2];
+    matrix[0] = x0c; matrix[4] = y0; matrix[8] = z0; matrix[12] = eye[0];
+    matrix[1] = x1c; matrix[5] = y1; matrix[9] = z1; matrix[13] = eye[1];
+    matrix[2] = x2c; matrix[6] = y2; matrix[10] = z2; matrix[14] = eye[2];
+    matrix[3] = 0; matrix[7] = 0; matrix[11] = 0; matrix[15] = 1;
 }
 
 function updateCamera() {
     perspective(projectionMatrix, Math.PI / 4, canvas.width / canvas.height, 0.1, 100);
-    lookAt(viewMatrix, [Math.cos(angleY) * zoom, Math.sin(angleX) * zoom, zoom], [0, 0, 0], [0, 1, 0]);
+    const eye = [Math.sin(angleY) * zoom, angleX * 2, Math.cos(angleY) * zoom];
+    lookAt(viewMatrix, eye, [0, 0, 0], [0, 1, 0]);
     multiplyMatrices(viewProjectionMatrix, projectionMatrix, viewMatrix);
-    gl.uniformMatrix4fv(gl.getUniformLocation(program, 'u_modelViewProjection'), false, viewProjectionMatrix);
 }
 
 function drawCube(x, y, z) {
@@ -250,6 +245,10 @@ canvas.addEventListener('wheel', (e) => {
 document.getElementById('startButton').addEventListener('click', () => {
     simulationStarted = true;
     document.getElementById('startButton').style.display = 'none';
+});
+
+document.getElementById('speedSlider').addEventListener('input', (e) => {
+    updateInterval = parseInt(e.target.value, 10);
 });
 
 gl.clearColor(0, 0, 0, 1);
