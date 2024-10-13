@@ -167,7 +167,7 @@ function drawCube(x, y, z, size) {
     modelMatrix[14] = translation[2];
 
     // Scale the cube based on the current siz
-    const scale = size || 1; // Use the provided size or default to 1
+    const scale = size || 1;
     modelMatrix[0] *= scale;
     modelMatrix[5] *= scale;
     modelMatrix[10] *= scale;
