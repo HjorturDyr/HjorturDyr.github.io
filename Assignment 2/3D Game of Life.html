@@ -5,26 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Game of Life</title>
     <style>
-        body { margin: 0; overflow: hidden; }
-        #controls {
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+        #ui {
             position: absolute;
             top: 10px;
             left: 10px;
-            color: white;
+            z-index: 10;
         }
         #startButton, #speedSlider {
+            margin: 10px;
             display: block;
-            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-    <div id="controls">
-        <button id="startButton">Start Simulation</button>
-        <label for="speedSlider">Simulation Speed:</label>
-        <input type="range" id="speedSlider" min="100" max="2000" value="1000">
-    </div>
-    <script src="gameOfLife3D.js"></script>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui">
+    <button id="startButton">Start Game of Life</button>
+    <label for="speedSlider">Speed:</label>
+    <input type="range" id="speedSlider" min="100" max="2000" step="100" value="1000">
+</div>
+
+<script src="gameOfLife3D.js"></script>
+
 </body>
 </html>
