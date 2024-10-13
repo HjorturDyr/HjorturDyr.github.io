@@ -4,6 +4,8 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let simulationStarted = false;
+let lastUpdateTime = 0;
+let updateInterval = 1000; // Time between updates in milliseconds (1 second = slower)
 
 const gridSize = 10;
 
@@ -211,7 +213,7 @@ function countNeighbors(x, y, z) {
     return count;
 }
 
-function render() {
+function render(currentTime) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     updateCamera();
 
@@ -225,8 +227,9 @@ function render() {
         }
     }
 
-    if (simulationStarted) {
+    if (simulationStarted && currentTime - lastUpdateTime > updateInterval) {
         stepGameOfLife();
+        lastUpdateTime = currentTime;
     }
 
     requestAnimationFrame(render);
@@ -251,4 +254,4 @@ document.getElementById('startButton').addEventListener('click', () => {
 
 gl.clearColor(0, 0, 0, 1);
 gl.enable(gl.DEPTH_TEST);
-render();
+render(0);
